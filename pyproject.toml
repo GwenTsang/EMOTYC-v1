@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emotyc"
+version = "0.1.0"
+description = "Minimal EMOTYC v1 inference, linear training and evaluation package"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+    "openpyxl",
+    "tokenizers",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+train = [
+    "scikit-learn",
+]
+dev = [
+    "pytest",
+    "ruff",
+    "scikit-learn",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
