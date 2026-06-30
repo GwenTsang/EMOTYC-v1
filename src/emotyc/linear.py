@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import LinearSVC
 
 from emotyc.artifacts import resolve_model_bundle
 from emotyc.encoders import Encoder, OnnxBackboneEncoder
@@ -175,7 +177,6 @@ def fit_linear_svc_head(
     max_iter: int = 1000,
 ) -> list[object]:
     """Fit one LinearSVC estimator per label."""
-    LinearSVC = _require_linear_svc()
     classifiers = []
     for label_index, label in enumerate(labels):
         target = gold[:, label_index]
@@ -228,7 +229,6 @@ def _fit_tfidf_encoder(
 ) -> tuple[TfidfEncoder, object, dict[str, Any]]:
     if ngram_range[0] <= 0 or ngram_range[0] > ngram_range[1]:
         raise ValueError("TF-IDF ngram range is invalid")
-    TfidfVectorizer = _require_tfidf_vectorizer()
     vectorizer = TfidfVectorizer(
         max_features=max_features,
         ngram_range=ngram_range,
@@ -312,23 +312,3 @@ def _validate_linear_config(config: object) -> None:
     encoder = config.get("encoder")
     if not isinstance(encoder, dict) or encoder.get("type") not in {"tfidf", "onnx"}:
         raise ValueError("linear_config.json encoder is invalid")
-
-
-def _require_tfidf_vectorizer() -> object:
-    try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-    except ImportError as exc:
-        raise RuntimeError(_missing_sklearn_message()) from exc
-    return TfidfVectorizer
-
-
-def _require_linear_svc() -> object:
-    try:
-        from sklearn.svm import LinearSVC
-    except ImportError as exc:
-        raise RuntimeError(_missing_sklearn_message()) from exc
-    return LinearSVC
-
-
-def _missing_sklearn_message() -> str:
-    return 'train_linear.py requires scikit-learn. Install it with: pip install -e ".[train]"'
