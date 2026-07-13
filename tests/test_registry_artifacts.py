@@ -47,7 +47,7 @@ def test_registry_known_aliases():
     }
     assert resolve_dataset_entry("CyberAgg") == {
         "repo_id": "GwendalTsang/CyberAggAdo",
-        "filename": "CyberAdoAgg_gold_global_total.xlsx",
+        "filename": "CyberAdoAgg_gold_global_total_latest.xlsx",
     }
 
 

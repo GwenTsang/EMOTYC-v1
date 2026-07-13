@@ -6,7 +6,7 @@ MODEL_ALIASES = {
 DATASET_ALIASES = {
     "CyberAgg": {
         "repo_id": "GwendalTsang/CyberAggAdo",
-        "filename": "CyberAdoAgg_gold_global_total.xlsx",
+        "filename": "CyberAdoAgg_gold_global_total_latest.xlsx",
     },
     "ttk": {
         "repo_id": "GwendalTsang/TTK",
@@ -36,4 +36,4 @@ def resolve_dataset_entry(alias: str) -> dict[str, str]:
         return DATASET_ALIASES[alias]
     except KeyError as exc:
         available = ", ".join(dataset_aliases())
-        raise ValueError(f"Unknown dataset alias '{alias}'. Available aliases: {available}") from exc
+        raise ValueError(f"Unknown dataset alias. Available aliases: {available}") from exc
