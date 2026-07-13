@@ -18,9 +18,16 @@ class OnnxBackboneEncoder:
     tokenizer: Tokenizer
     input_names: set[str]
     pad_id: int
+    add_special_tokens: bool = False
 
     @classmethod
-    def from_files(cls, backbone_path: str, tokenizer_path: str) -> "OnnxBackboneEncoder":
+    def from_files(
+        cls,
+        backbone_path: str,
+        tokenizer_path: str,
+        *,
+        add_special_tokens: bool = False,
+    ) -> "OnnxBackboneEncoder":
         import onnxruntime as ort
 
         options = ort.SessionOptions()
@@ -44,7 +51,13 @@ class OnnxBackboneEncoder:
         pad_id = tokenizer.token_to_id("<pad>")
         if pad_id is None:
             pad_id = 1
-        return cls(session, tokenizer, {item.name for item in session.get_inputs()}, int(pad_id))
+        return cls(
+            session,
+            tokenizer,
+            {item.name for item in session.get_inputs()},
+            int(pad_id),
+            add_special_tokens,
+        )
 
     def encode(self, texts: list[str], batch_size: int) -> np.ndarray:
         ordered_items = self._sort_by_encoded_length(texts)
@@ -74,13 +87,21 @@ class OnnxBackboneEncoder:
 
     def _sort_by_encoded_length(self, texts: list[str]) -> list[tuple[int, str]]:
         lengths = [
-            len(self.tokenizer.encode(text, add_special_tokens=False).ids)
+            len(
+                self.tokenizer.encode(
+                    text,
+                    add_special_tokens=self.add_special_tokens,
+                ).ids
+            )
             for text in texts
         ]
         return sorted(enumerate(texts), key=lambda item: lengths[item[0]])
 
     def _encode_batch(self, texts: list[str]) -> dict[str, np.ndarray]:
-        encodings = self.tokenizer.encode_batch(texts, add_special_tokens=False)
+        encodings = self.tokenizer.encode_batch(
+            texts,
+            add_special_tokens=self.add_special_tokens,
+        )
         max_len = max((len(encoding.ids) for encoding in encodings), default=1)
         input_ids = np.full((len(encodings), max_len), self.pad_id, dtype=np.int64)
         attention_mask = np.zeros((len(encodings), max_len), dtype=np.int64)

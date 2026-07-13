@@ -95,6 +95,41 @@ def test_onnx_encoder_does_not_add_special_tokens():
     assert inputs["input_ids"].tolist() == [[10, 11]]
 
 
+def test_onnx_encoder_can_add_special_tokens():
+    class FakeEncoding:
+        def __init__(self):
+            self.ids = [5, 10, 11, 6]
+
+    class FakeTokenizer:
+        def __init__(self):
+            self.encode_flags = []
+            self.encode_batch_flags = []
+
+        def encode(self, text, add_special_tokens):
+            self.encode_flags.append(add_special_tokens)
+            return FakeEncoding()
+
+        def encode_batch(self, texts, add_special_tokens):
+            self.encode_batch_flags.append(add_special_tokens)
+            return [FakeEncoding() for _ in texts]
+
+    tokenizer = FakeTokenizer()
+    encoder = OnnxBackboneEncoder(
+        session=object(),
+        tokenizer=tokenizer,
+        input_names=set(),
+        pad_id=1,
+        add_special_tokens=True,
+    )
+
+    encoder._sort_by_encoded_length(["hello"])
+    inputs = encoder._encode_batch(["hello"])
+
+    assert tokenizer.encode_flags == [True]
+    assert tokenizer.encode_batch_flags == [True]
+    assert inputs["input_ids"].tolist() == [[5, 10, 11, 6]]
+
+
 def test_onnx_encoder_sorts_by_length_and_restores_original_order():
     class FakeEncoding:
         def __init__(self, ids):

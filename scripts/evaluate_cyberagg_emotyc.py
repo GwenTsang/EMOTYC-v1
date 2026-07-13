@@ -17,6 +17,7 @@ EXPECTED_SAMPLES = 783
 EXPECTED_LABELS = 19
 THRESHOLD = 0.5
 BATCH_SIZE = 128
+ADD_SPECIAL_TOKENS = False
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ def main() -> None:
     data_path = resolve_dataset(DATASET)
     results = [run_evaluation(data_path, spec) for spec in RUNS]
 
+    print(f"add_special_tokens = {ADD_SPECIAL_TOKENS}")
     print("Métriques globales")
     print(format_global_table(results))
     print("")
@@ -58,7 +60,10 @@ def main() -> None:
 
 def run_evaluation(data_path: Path, spec: RunSpec) -> EvaluationResult:
     bundle = resolve_model_bundle(spec.model_alias)
-    predictor = Predictor.from_bundle(bundle)
+    predictor = Predictor.from_bundle(
+        bundle,
+        add_special_tokens=ADD_SPECIAL_TOKENS,
+    )
     dataset = load_xlsx(data_path, model_labels=predictor.labels, require_gold=True)
     if len(dataset.texts) != EXPECTED_SAMPLES:
         raise ValueError(

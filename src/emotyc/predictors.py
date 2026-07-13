@@ -16,12 +16,21 @@ class Predictor:
     labels: list[str]
 
     @classmethod
-    def from_bundle(cls, bundle: ModelBundle) -> "Predictor":
+    def from_bundle(
+        cls,
+        bundle: ModelBundle,
+        *,
+        add_special_tokens: bool = False,
+    ) -> "Predictor":
         labels = labels_from_model_config(bundle.model_config)
         head = ClassificationHead.from_files(bundle.head_weights, bundle.head_config)
         if head.n_labels != len(labels):
             raise ValueError("head.json n_labels does not match model_config.json labels")
-        encoder = OnnxBackboneEncoder.from_files(str(bundle.backbone), str(bundle.tokenizer))
+        encoder = OnnxBackboneEncoder.from_files(
+            str(bundle.backbone),
+            str(bundle.tokenizer),
+            add_special_tokens=add_special_tokens,
+        )
         return cls(encoder=encoder, head=head, labels=labels)
 
     def predict(
