@@ -50,16 +50,10 @@ def main(argv: list[str] | None = None) -> None:
     global_metrics, per_label = compute_metrics(dataset.gold, pred, dataset.labels_evaluated)
 
     print("Metriques globales")
-    print(f"micro-F1: {global_metrics['micro_f1']:.4f}")
-    print(f"macro-F1: {global_metrics['macro_f1']:.4f}")
-    print(f"exact match: {global_metrics['exact_match']:.4f}")
+    print(format_global_metrics_table(global_metrics))
     print("")
     print("Metriques par label")
-    for row in per_label:
-        print(
-            f"{row['label']}\tprecision={row['precision']:.4f}\t"
-            f"recall={row['recall']:.4f}\tf1={row['f1']:.4f}\tsupport={row['support']}"
-        )
+    print(format_per_label_metrics_table(per_label))
     if dataset.labels_missing:
         print("")
         print("Labels absents: " + ", ".join(dataset.labels_missing))
@@ -96,6 +90,32 @@ def main(argv: list[str] | None = None) -> None:
                 probabilities=proba,
                 gold=dataset.gold,
             )
+
+
+def format_global_metrics_table(metrics: dict[str, object]) -> str:
+    """Format global evaluation metrics as a terminal-friendly Markdown table."""
+    return "\n".join(
+        (
+            "| micro-F1 | macro-F1 | exact match |",
+            "|---:|---:|---:|",
+            "| {micro_f1:.4f} | {macro_f1:.4f} | {exact_match:.4f} |".format(**metrics),
+        )
+    )
+
+
+def format_per_label_metrics_table(rows: list[dict[str, object]]) -> str:
+    """Format precision, recall, F1 and support for each evaluated label."""
+    lines = [
+        "| Label | Précision | Rappel | F1 | Support |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        lines.append(
+            "| {label} | {precision:.4f} | {recall:.4f} | {f1:.4f} | {support} |".format(
+                **row
+            )
+        )
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

@@ -36,24 +36,61 @@ python scripts/install_onnxruntime.py --gpu
 
 L'option `--auto` choisit la version CPU si aucun signal GPU/CUDA n'est détecté.
 
+## Modèles et datasets disponibles
+
+Les alias sont définis dans `src/emotyc/registry.py`.
+
+### Modèles
+
+| Alias | Dépôt Hugging Face |
+|---|---|
+| `emotyc_1` | `GwendalTsang/EMOTYC_1` |
+| `emotyc_2` | `GwendalTsang/EMOTYC_2` |
+
+### Datasets
+
+| Alias | Dépôt Hugging Face | Fichier |
+|---|---|---|
+| `CyberAgg` | `GwendalTsang/CyberAggAdo` | `CyberAdoAgg_gold_global_total_latest.xlsx` |
+| `ttk` | `GwendalTsang/TTK` | `emotexttokids_gold_flat.xlsx` |
+
+Les modèles et datasets sont téléchargés automatiquement depuis Hugging Face
+Hub lors de la première utilisation.
+
 ## Prédiction
 
 `predict.py` lit un XLSX avec une colonne `TEXT`, applique le template choisi,
 charge le modèle, puis affiche les labels prédits ligne par ligne.
 
+Prédiction avec le modèle `emotyc_1` sur le dataset `ttk` :
+
 ```bash
 python predict.py \
   --model emotyc_1 \
-  --data donnees.xlsx \
+  --data ttk \
   --template raw \
   --threshold 0.5 \
   --batch-size 32 \
   --out predictions.xlsx
 ```
 
+Prédiction avec le modèle `emotyc_2` sur le dataset `CyberAgg` :
+
+```bash
+python predict.py \
+  --model emotyc_2 \
+  --data CyberAgg \
+  --template raw \
+  --threshold 0.5 \
+  --out predictions_cyberagg.xlsx
+```
+
 `--model` accepte un alias connu (`emotyc_1`, `emotyc_2`) ou le chemin local
-d'un bundle v1. `--out` est optionnel et écrit un XLSX avec `TEXT`, les colonnes
-`pred_<label>` et les colonnes `proba_<label>`.
+d'un bundle v1. `--data` accepte un alias de dataset connu (`ttk`, `CyberAgg`)
+ou le chemin d'un fichier XLSX local. `--out` est optionnel et écrit un XLSX
+avec `TEXT`, les colonnes `pred_<label>` et les colonnes `proba_<label>`.
+
+### Templates
 
 Templates disponibles :
 
@@ -69,7 +106,7 @@ devient artificiel.
 ```bash
 python predict.py \
   --model emotyc_1 \
-  --data donnees.xlsx \
+  --data ttk \
   --template bca \
   --use-context
 ```
@@ -79,24 +116,61 @@ python predict.py \
 `evaluate.py` utilise le même chemin d'inférence que `predict.py`, puis compare
 les prédictions aux colonnes labels présentes dans le XLSX.
 
+### Évaluation sur un dataset connu avec `--dataset`
+
 ```bash
 python evaluate.py \
   --model emotyc_1 \
-  --data donnees_annotees.xlsx \
+  --dataset ttk \
   --template raw \
   --threshold 0.5 \
   --batch-size 32 \
   --save-config \
   --save-metrics \
   --save-predictions \
-  --out-dir runs/eval_001
+  --out-dir runs/eval_emotyc1_ttk
 ```
 
-Un dataset connu peut aussi être utilisé :
+### Évaluation sur un dataset connu avec `--data`
+
+Le flag `--data` accepte aussi un alias de dataset connu :
 
 ```bash
-python evaluate.py --model emotyc_1 --dataset ttk --save-metrics
+python evaluate.py \
+  --model emotyc_2 \
+  --data CyberAgg \
+  --template raw \
+  --save-metrics \
+  --out-dir runs/eval_emotyc2_cyberagg
 ```
+
+### Évaluation avec template BCA et contexte
+
+```bash
+python evaluate.py \
+  --model emotyc_1 \
+  --dataset CyberAgg \
+  --template bca \
+  --use-context \
+  --save-metrics \
+  --save-predictions \
+  --out-dir runs/eval_emotyc1_cyberagg_bca
+```
+
+### Évaluation sur un fichier XLSX local
+
+```bash
+python evaluate.py \
+  --model emotyc_1 \
+  --data mon_fichier_annote.xlsx \
+  --template raw \
+  --save-metrics \
+  --out-dir runs/eval_local
+```
+
+> **Note :** `--dataset` et `--data` sont mutuellement exclusifs. Utilisez
+> `--dataset` pour un alias de dataset connu, ou `--data` pour un fichier XLSX
+> local ou un alias de dataset.
 
 Les sorties optionnelles sont :
 
@@ -112,8 +186,29 @@ micro-F1, macro-F1 et exact match.
 `compare_results.py` compare deux fichiers `metrics.json` produits par
 `evaluate.py`.
 
+Commencez par produire deux évaluations avec `--save-metrics` :
+
 ```bash
-python compare_results.py runs/a/metrics.json runs/b/metrics.json --out comparaison.json
+python evaluate.py \
+  --model emotyc_1 \
+  --dataset ttk \
+  --save-metrics \
+  --out-dir runs/eval_emotyc1_ttk
+
+python evaluate.py \
+  --model emotyc_2 \
+  --dataset ttk \
+  --save-metrics \
+  --out-dir runs/eval_emotyc2_ttk
+```
+
+Puis comparez les résultats :
+
+```bash
+python compare_results.py \
+  runs/eval_emotyc1_ttk/metrics.json \
+  runs/eval_emotyc2_ttk/metrics.json \
+  --out comparaison_ttk.json
 ```
 
 La comparaison contient les écarts de métriques globales, les écarts par labels
@@ -128,41 +223,65 @@ annoté. L'encodeur peut être :
 - `tfidf` : features TF-IDF apprises sur le fichier d'entraînement ;
 - `onnx` : embeddings extraits avec un backbone ONNX existant.
 
-Entraînement TF-IDF :
+### Entraînement TF-IDF sur le dataset `ttk`
 
 ```bash
 python train_linear.py train \
-  --data donnees_annotees.xlsx \
+  --data ttk \
   --labels joie tristesse colere \
   --encoder tfidf \
-  --out-dir runs/linear_tfidf \
+  --out-dir runs/linear_tfidf_ttk \
   --save-predictions
 ```
 
-Entraînement avec un backbone ONNX local :
+### Entraînement TF-IDF sur le dataset `CyberAgg`
 
 ```bash
 python train_linear.py train \
-  --data donnees_annotees.xlsx \
+  --data CyberAgg \
   --labels joie tristesse colere \
-  --encoder onnx \
-  --backbone-model /chemin/vers/camembert-onnx \
-  --out-dir runs/linear_onnx
+  --encoder tfidf \
+  --out-dir runs/linear_tfidf_cyberagg \
+  --save-predictions
 ```
 
-`--backbone-model` accepte soit un bundle EMOTYC complet, soit un dossier
-backbone-only contenant `tokenizer.json` et `model.onnx` ou `backbone.onnx`.
+### Entraînement avec un backbone ONNX
 
-Évaluation d'un modèle linéaire sauvegardé :
+`--backbone-model` accepte soit un alias de modèle EMOTYC (`emotyc_1`,
+`emotyc_2`), soit un dossier backbone-only contenant `tokenizer.json` et
+`model.onnx` ou `backbone.onnx`.
+
+```bash
+python train_linear.py train \
+  --data ttk \
+  --labels joie tristesse colere \
+  --encoder onnx \
+  --backbone-model emotyc_1 \
+  --out-dir runs/linear_onnx_ttk
+```
+
+### Évaluation d'un modèle linéaire sauvegardé
 
 ```bash
 python train_linear.py evaluate \
-  --model runs/linear_onnx \
-  --data donnees_annotees.xlsx \
+  --model runs/linear_tfidf_ttk \
+  --data ttk \
   --save-metrics \
   --save-predictions \
-  --out-dir runs/linear_eval
+  --out-dir runs/linear_eval_ttk
 ```
+
+### Options avancées de `train`
+
+| Option | Défaut | Description |
+|---|---|---|
+| `--max-features` | aucun | Nombre maximal de features TF-IDF |
+| `--ngram-min` | `1` | Borne basse des n-grams TF-IDF |
+| `--ngram-max` | `2` | Borne haute des n-grams TF-IDF |
+| `--no-lowercase` | désactivé | Désactiver la normalisation lowercase TF-IDF |
+| `--c` | `1.0` | Paramètre C de LinearSVC |
+| `--class-weight` | `none` | Pondération des classes (`none` ou `balanced`) |
+| `--max-iter` | `1000` | Nombre maximal d'itérations LinearSVC |
 
 Les artefacts produits par `train_linear.py train` sont :
 

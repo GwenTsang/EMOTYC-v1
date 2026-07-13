@@ -8,7 +8,6 @@ EOS = "</s>"
 
 
 def raw(text: str) -> str:
-    """Return the text unchanged."""
     return text
 
 

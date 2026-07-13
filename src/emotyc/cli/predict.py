@@ -37,7 +37,6 @@ def main(argv: list[str] | None = None) -> None:
 
     for index, row in enumerate(result.predictions):
         positives = [label for label, value in zip(result.labels, row, strict=True) if value == 1]
-        print(f"{index + 1}\t{', '.join(positives)}")
 
     if args.out:
         export_predictions_xlsx(
